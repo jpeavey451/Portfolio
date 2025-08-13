@@ -15,28 +15,25 @@ namespace TicketDepot.TicketManagement.WebApi
     public static class Configuration
     {
         /// <summary>
-        /// Gets the configuration for the specified section name and validates it.
+        /// Gets the configuration for the AzureAd and validates it.
         /// </summary>
-        /// <param name="services">The <see cref="IServiceCollection"/>.</param>
-        /// <param name="configuration">The <see cref="IConfiguration"/>.</param>
-        /// <param name="sectionName">The configuration section name.</param>
-        public static void AddAndValidateAuthorizationConfiguration(this IServiceCollection services, IConfiguration configuration, string sectionName = IServiceAuthorizationConfiguration.SectionName)
+        /// <param name="builder">The <see cref="WebApplicationBuilder"/>.</param>
+        public static void AddAndValidateAuthorizationConfiguration(this WebApplicationBuilder builder)
         {
-            Requires.NotNull(services, nameof(services));
-            Requires.NotNull(configuration, nameof(configuration));
+            IConfigurationSection defaultConfiguration = builder.Configuration.GetSection(AuthConfig.AzureADSectionName);
+            builder.Services.AddSingleton<AbstractValidator<IServiceAuthorizationConfiguration>, ServiceConfigurationValidator>();
 
-            IConfigurationSection defaultConfiguration = configuration.GetSection(sectionName);
-
-            services.Configure<ServiceAuthorizationConfiguration>(defaultConfiguration);
-
-            services.AddSingleton<AbstractValidator<IServiceAuthorizationConfiguration>, ServiceConfigurationValidator>();
-            services.TryAddSingleton<IServiceAuthorizationConfiguration>(serviceProvider =>
+            builder.Services.Configure<ServiceAuthorizationConfiguration>(defaultConfiguration)
+                .TryAddSingleton<IServiceAuthorizationConfiguration>(serviceProvider =>
             {
-                ServiceAuthorizationConfiguration authorizationconfig = serviceProvider.GetService<IOptions<ServiceAuthorizationConfiguration>>()!.Value;
+                ServiceAuthorizationConfiguration serviceConfig = serviceProvider.GetService<IOptions<ServiceAuthorizationConfiguration>>()!.Value;
                 AbstractValidator<IServiceAuthorizationConfiguration> validator = serviceProvider.GetService<AbstractValidator<IServiceAuthorizationConfiguration>>()!;
-                validator.ValidateAndThrow(authorizationconfig);
-                
-                return authorizationconfig;
+                validator.ValidateAndThrow(serviceConfig);
+
+                // only to be used with KeyVault, given the cost, not viable for a personal POC
+                //builder.AddKeyVaultSecerts(serviceConfig);
+
+                return serviceConfig;
             });
         }
 
@@ -65,44 +62,42 @@ namespace TicketDepot.TicketManagement.WebApi
         /// <param name="services">Where the configuration object will be added.</param>
         /// <param name="config">The reference to all configs.</param>
         /// <param name="sectionName">The name of the section in the config. Should be retrieved from TI.SectionName.</param>
-        public static void AddAndValidateConfigurationObject<TI, TC, TV>(this IServiceCollection services, IConfiguration config, string sectionName)
+        private static void AddAndValidateConfigurationObject<TI, TC, TV>(this IServiceCollection services, IConfiguration config, string sectionName)
             where TI : class
             where TC : class, TI
             where TV : AbstractValidator<TI>
         {
-            services.Configure<TC>(config.GetSection(sectionName));
             services.AddSingleton<AbstractValidator<TI>, TV>();
-            services.TryAddSingleton<TI>(serviceProvider =>
-            {
-                TC config = serviceProvider.GetService<IOptions<TC>>()!.Value;
-                AbstractValidator<TI> validator = serviceProvider.GetService<AbstractValidator<TI>>()!;
-                validator.ValidateAndThrow(config);
-                return config;
-            });
+            services.Configure<TC>(config.GetSection(sectionName))
+                .TryAddSingleton<TI>(serviceProvider =>
+                {
+                    TC config = serviceProvider.GetService<IOptions<TC>>()!.Value;
+                    AbstractValidator<TI> validator = serviceProvider.GetService<AbstractValidator<TI>>()!;
+                    validator.ValidateAndThrow(config);
+                    return config;
+                });
         }
 
         /// <summary>
         /// Adds Active/Enabled given secrets into IConfiguration from given keyvault
         /// </summary>
-        /// <param name="configurationBuilder"></param>
+        /// <param name="builder"></param>
         /// <param name="serviceConfig"></param>
-        public static void AddKeyVaultSecerts(this IConfigurationBuilder configurationBuilder, IServiceAuthorizationConfiguration serviceConfig)
+        private static void AddKeyVaultSecerts(this WebApplicationBuilder builder, IServiceAuthorizationConfiguration serviceConfig )
         {
-            string[] spnSecretName = [serviceConfig.SPNName!];
-            if (!TimeSpan.TryParse( serviceConfig.ReloadInterval, out TimeSpan spnSecretRefreshIntervalTimeSpan))
+            if ( !TimeSpan.TryParse( serviceConfig.ReloadInterval, out TimeSpan spnSecretRefreshIntervalTimeSpan ) )
             {
-                spnSecretRefreshIntervalTimeSpan = new TimeSpan(0, 30, 00);
+                spnSecretRefreshIntervalTimeSpan = new TimeSpan( 0, 30, 00 );
             }
 
             // Reloading at 30 min interval to ensure only Enabled and Active (not expired) Secrets are available in IConfiguration.
-            configurationBuilder.AddAzureKeyVault(
+            builder.Configuration.AddAzureKeyVault(
                 new Uri(serviceConfig.KeyVaultURL!),
                 new DefaultAzureCredential(),
                 new AzureKeyVaultConfigurationOptions
                 {
                     ReloadInterval = spnSecretRefreshIntervalTimeSpan,
-                    Manager = new ActiveKeyVaultSecretManager(spnSecretName)
-                });
+                    Manager = new ActiveKeyVaultSecretManager([serviceConfig.SPNName!])
+                } );
         }
-    }
 }

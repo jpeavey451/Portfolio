@@ -6,12 +6,19 @@ using Validation;
 
 namespace TicketDepot.Shared
 {
-
+    /// <summary>
+    /// The Bearer Token Handler class.
+    /// </summary>
     public class BearerTokenHandler : DelegatingHandler
     {
         private readonly ILogger<BearerTokenHandler> logger;
         private readonly ITokenStore tokenStore;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="BearerTokenHandler"/>.
+        /// </summary>
+        /// <param name="tokenStore"></param>
+        /// <param name="logger"></param>
         public BearerTokenHandler(ITokenStore tokenStore, ILogger<BearerTokenHandler> logger)
         {
             Requires.NotNull(tokenStore, nameof(tokenStore));
@@ -23,16 +30,17 @@ namespace TicketDepot.Shared
 
         public ServiceType ServiceType { get; set; }
 
-        public string ApplicationRegistrationScope { get; set; }
+        public string? ApplicationRegistrationScope { get; set; }
 
         protected async override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            Requires.NotNull(request, nameof(request));
-
             try
             {
+                Requires.NotNull( request, nameof( request ) );
+                Requires.NotNullOrWhiteSpace( this.ApplicationRegistrationScope!, nameof( this.ApplicationRegistrationScope ));
+
                 // request the access token
                 string accessToken = await this.tokenStore.GetAccessTokenAsync(this.ServiceType, this.ApplicationRegistrationScope).ConfigureAwait(false);
                 if (string.IsNullOrWhiteSpace(accessToken))

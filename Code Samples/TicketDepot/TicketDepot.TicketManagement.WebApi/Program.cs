@@ -65,6 +65,9 @@ namespace TicketDepot.TicketManagement.WebApi
             // Add AutoMapper to the service collection
             // builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
+            builder.AddAndValidateAuthorizationConfiguration();
+            builder.Services.AddAndValidateConfigurations(builder.Configuration);
+
             builder.Services.AddAutoMapper(typeof(ModelMapper));
 
             builder.Services.AddMiscServices();

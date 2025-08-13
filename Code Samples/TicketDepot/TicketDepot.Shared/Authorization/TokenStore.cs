@@ -50,7 +50,7 @@ namespace TicketDepot.Shared
                                         auth0EnabledServices.ToLower(CultureInfo.InvariantCulture).DeserializeObject<List<string>>()
                                         : null;
 
-            if (auth0Enabled != null && auth0Enabled.Contains(scopeType.ToString().ToLower(CultureInfo.InvariantCulture)))
+            if (auth0Enabled?.Contains(scopeType.ToString().ToLower(CultureInfo.InvariantCulture)) ?? false)
             {
                 tokenValue = await this.tokenGeneratorFactory.GetTokenGenerator(AuthSchemes.Auth0).GetAccessTokenAsync(scope).ConfigureAwait(false);
             }

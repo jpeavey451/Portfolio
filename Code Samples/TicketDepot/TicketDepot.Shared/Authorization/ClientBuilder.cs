@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.Identity.Client;
 
 namespace TicketDepot.Shared
@@ -8,20 +9,26 @@ namespace TicketDepot.Shared
     /// </summary>
     public class ClientBuilder : IClientBuilder
     {
+        private readonly ServiceAuthorizationConfiguration serviceConfig;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="ClientBuilder"/>
+        /// </summary>
+        /// <param name="serviceConfig"></param>
+        public ClientBuilder(IOptions<ServiceAuthorizationConfiguration> serviceConfig)
+        {
+            this.serviceConfig = serviceConfig.Value;
+        }
+
         /// <inheritdoc/>
         public IConfidentialClientApplication CreateClientBuilder(IConfiguration configuration)
         {
-            string spnName = configuration.GetSection($"{AuthConfig.AzureADSectionName}:{AuthConfig.SPNName}").Value!;
-            string clientSecret = configuration.GetSection(spnName).Value!;
-            string tenantId = configuration.GetSection($"{AuthConfig.AzureADSectionName}:{AuthConfig.TenantId}").Value!;
-            string azureAdAuthorityBaseUrl = configuration.GetSection($"{AuthConfig.AzureADSectionName}:{AuthConfig.Instance}").Value!;
-            string tenantAuthrorityUrl = $"{azureAdAuthorityBaseUrl}{tenantId}";
-            string spnClientId = configuration.GetSection($"{AuthConfig.AzureADSectionName}:{AuthConfig.ClientId}").Value!;
+            string clientSecret = configuration.GetSection(this.serviceConfig.SPNName!).Value!;
 
             IConfidentialClientApplication confidentialClient = ConfidentialClientApplicationBuilder
-                    .Create(spnClientId) // App ID
-                    .WithAuthority(tenantAuthrorityUrl)
-                    .WithTenantId(tenantId)
+                    .Create(this.serviceConfig.ClientId! ) // App ID
+                    .WithAuthority( $"{this.serviceConfig.Instance!}{this.serviceConfig.TenantId!}" )
+                    .WithTenantId( this.serviceConfig.TenantId! )
                     .WithClientSecret(clientSecret)
                     .Build();
 

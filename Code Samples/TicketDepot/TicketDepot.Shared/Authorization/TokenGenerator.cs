@@ -4,6 +4,7 @@ namespace TicketDepot.Shared
 {
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using Microsoft.Identity.Client;
     using System;
     using System.Collections.Generic;
@@ -19,6 +20,7 @@ namespace TicketDepot.Shared
         private readonly ILogger<TokenGenerator> logger;
         private readonly IConfiguration configuration;
         private readonly IClientBuilder clientBuilder;
+        private readonly ServiceAuthorizationConfiguration serviceConfig;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TokenGenerator"/> class.
@@ -29,12 +31,13 @@ namespace TicketDepot.Shared
         public TokenGenerator(
             ILogger<TokenGenerator> logger,
             IConfiguration configuration,
-            IClientBuilder clientBuilder)
+            IClientBuilder clientBuilder,
+            IOptions<ServiceAuthorizationConfiguration> serviceConfig )
         {
-            Requires.NotNull(logger, nameof(logger));
             this.configuration = configuration;
             this.logger = logger;
             this.clientBuilder = clientBuilder;
+            this.serviceConfig = serviceConfig.Value;
         }
 
         /// <summary>
@@ -54,7 +57,7 @@ namespace TicketDepot.Shared
             try
             {
                 List<string> scopes = new List<string> { scope };
-                string spnName = this.configuration.GetSection($"{AuthConfig.AzureADSectionName}:{AuthConfig.SPNName}").Value!;
+                string spnName = this.serviceConfig.SPNName!;
                 string clientSecret = this.configuration.GetSection(spnName).Value!;
 
                 if (this.ConfidentialClient == null || !this.ConfidentialClient.AppConfig.ClientSecret.Equals(clientSecret, StringComparison.Ordinal))

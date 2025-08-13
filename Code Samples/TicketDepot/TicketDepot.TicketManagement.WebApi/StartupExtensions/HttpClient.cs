@@ -30,15 +30,15 @@ namespace TicketDepot.TicketManagement.WebApi.StartupExtensions
             services
                 .AddHttpClient<IPaymentServiceClient, IPaymentServiceClient>((provider, client) =>
                 {
-                    PaymentServiceConfiguration paymentServiceConfiguration = provider.GetRequiredService<IOptions<PaymentServiceConfiguration>>().Value;
-                    client.BaseAddress = new Uri(paymentServiceConfiguration.BaseAddress);
+                    PaymentServiceConfiguration paymentServiceConfig = provider.GetRequiredService<IOptions<PaymentServiceConfiguration>>().Value;
+                    client.BaseAddress = new Uri(paymentServiceConfig.BaseAddress);
                 })
                 .AddHttpMessageHandler(provider =>
                 {
-                    PaymentServiceConfiguration notificationServiceConfiguration = provider.GetRequiredService<IOptions<PaymentServiceConfiguration>>().Value;
+                    PaymentServiceConfiguration paymentServiceConfig = provider.GetRequiredService<IOptions<PaymentServiceConfiguration>>().Value;
                     BearerTokenHandler handler = provider.GetRequiredService<BearerTokenHandler>();
                     handler.ServiceType = ServiceType.PaymentService;
-                    handler.ApplicationRegistrationScope = $"api://{notificationServiceConfiguration.SPNClientId}/.default";
+                    handler.ApplicationRegistrationScope = $"api://{paymentServiceConfig.SPNClientId}/.default";
                     return handler;
                 });
         }
