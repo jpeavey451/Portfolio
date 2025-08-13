@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.52.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Validation" Version="2.6.68" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TicketDepot.Shared\TicketDepot.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
